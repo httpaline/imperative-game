@@ -92,3 +92,42 @@ button {
 button:hover {
     background-color: #80bce1;
 }
+/* Result Section */
+.result-score {
+    font-size: 1.5rem;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.result-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 auto;
+    max-width: 400px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0.5rem;
+    margin-bottom: 0.3rem;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.3s, border 0.3s;
+}
+
+.result-verb {
+    font-weight: bold;
+    flex-grow: 1;
+}
+
+.result-status {
+    margin-left: 1rem;
+    font-weight: bold;
+}
+
+
+
+
