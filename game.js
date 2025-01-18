@@ -7,6 +7,7 @@ let currentQuestion = 0;
 let score = 0;
 let chosenAnswers = [];
 let totalQuestions = 0;
+let isDataLoaded = false;
 
 // Elementos DOM
 const elements = {
@@ -33,6 +34,7 @@ async function loadVerbsFromCSV() {
         const csvText = await response.text();
         verbsData = parseCSV(csvText);
         filterVerbsByCategory(1); // Categoria 1 com imagem
+        isDataLoaded = true;
     } catch (error) {
         console.error("Erro ao carregar verbos do CSV:", error);
         alert(`Erro ao acessar o CSV: ${error.message}`);
@@ -40,7 +42,7 @@ async function loadVerbsFromCSV() {
 }
 
 function parseCSV(csvText) {
-    const rows = csvText.split("\n").slice(1); 
+    const rows = csvText.split("\n").slice(1);
     return rows.map((row, index) => {
         const [categoryName, categoryId, verb, image] = row.split(",");
         if (!categoryName || !categoryId || !verb) {
@@ -53,7 +55,7 @@ function parseCSV(csvText) {
             verb: verb.trim(),
             hasImage: image?.trim().toLowerCase() === "yes"
         };
-    }).filter(Boolean); // Remove nulos
+    }).filter(Boolean);
 }
 
 function filterVerbsByCategory(categoryId) {
@@ -76,6 +78,7 @@ function preloadImagesAsync(urls) {
 }
 
 function startGame() {
+    if (!isDataLoaded) return;
     elements.coverContainer.classList.add("hidden");
     elements.questionSection.classList.remove("hidden");
     displayQuestion();
@@ -142,7 +145,7 @@ function endGame() {
     elements.questionSection.classList.add("hidden");
     elements.resultSection.classList.remove("hidden");
 
-    
+
     elements.resultElement.innerHTML = `
     <p class="result-score">You got <span class="score">${score}</span> out of <span class="total">${totalQuestions}</span> correct!</p>
     <ul class="result-list">
@@ -153,12 +156,12 @@ function endGame() {
         `).join("")}
     </ul>
 `;
-
-    document.querySelector(".play-again-button").addEventListener("click", () => location.reload());
 }
 
-
-elements.playAgainButton.addEventListener("click", () => location.reload());
+elements.playAgainButton.addEventListener("click", () => {
+    if (!isDataLoaded) return;
+    location.reload();
+});
 
 document.addEventListener("DOMContentLoaded", async () => {
     elements.coverImage.innerText = "Loading data...";
