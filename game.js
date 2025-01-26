@@ -1,4 +1,3 @@
-// URLs e Dados
 const sheetCSVURL = "https://script.google.com/macros/s/AKfycbyuaknQikwyWMkbiVYF6x46IQgVRGMulj9ujN-gOFLx1XW92QGEUwqTVK-LcU4nckxh8A/exec";
 const firebaseBaseURL = "https://firebasestorage.googleapis.com/v0/b/irregularverbslingualize.appspot.com/o/images%2F";
 let verbsData = [];
@@ -9,94 +8,108 @@ let chosenAnswers = [];
 let totalQuestions = 0;
 let isDataLoaded = false;
 
-// Elementos DOM
 const elements = {
-    coverImage: document.getElementById("cover-image"),
     questionImage: document.getElementById("question-image"),
     questionElement: document.getElementById("question"),
     optionsElement: document.getElementById("options"),
     resultSection: document.getElementById("result-section"),
     resultElement: document.getElementById("result"),
     playAgainButton: document.getElementById("play-again"),
-    coverContainer: document.getElementById("cover-container"),
-    questionSection: document.getElementById("question-section")
+    questionSection: document.getElementById("question-section"),
+    categorySelection: document.getElementById("category-selection"),
+    categoriesContainer: document.getElementById("categories"),
 };
 
 async function loadVerbsFromCSV() {
     try {
-        console.log("Carregando dados do CSV...");
         const response = await fetch(sheetCSVURL);
-
         if (!response.ok) {
             throw new Error(`Erro ao acessar o CSV: ${response.statusText}`);
         }
-
         const csvText = await response.text();
         verbsData = parseCSV(csvText);
-        filterVerbsByCategory(1); // Categoria 1 com imagem
+        if (verbsData.length === 0) {
+            throw new Error("Nenhum dado foi carregado do CSV.");
+        }
         isDataLoaded = true;
+        displayCategories();
     } catch (error) {
-        console.error("Erro ao carregar verbos do CSV:", error);
         alert(`Erro ao acessar o CSV: ${error.message}`);
     }
 }
 
 function parseCSV(csvText) {
     const rows = csvText.split("\n").slice(1);
-    return rows.map((row, index) => {
-        const [categoryName, categoryId, verb, image] = row.split(",");
-        if (!categoryName || !categoryId || !verb) {
-            console.warn(`Linha inválida ${index + 2}: ${row}`);
-            return null;
-        }
-        return {
-            category: categoryName.trim(),
-            id: categoryId.trim(),
-            verb: verb.trim(),
-            hasImage: image?.trim().toLowerCase() === "yes"
-        };
-    }).filter(Boolean);
+    return rows
+        .map((row) => {
+            const [categoryName, categoryId, verb, image] = row.split(",");
+            if (!categoryName || !categoryId || !verb) {
+                return null;
+            }
+            return {
+                category: categoryName.trim(),
+                id: categoryId.trim(),
+                verb: verb.trim(),
+                hasImage: image?.trim().toLowerCase() === "yes",
+            };
+        })
+        .filter(Boolean);
 }
 
-function filterVerbsByCategory(categoryId) {
+function displayCategories() {
+    const categoryImages = {
+        basic: `${firebaseBaseURL}basic.webp?alt=media`,
+        fitness: `${firebaseBaseURL}fitness.webp?alt=media`,
+        business: `${firebaseBaseURL}business.webp?alt=media`,
+        tourism: `${firebaseBaseURL}tourism.webp?alt=media`,
+        academic: `${firebaseBaseURL}academic.webp?alt=media`,
+        family: `${firebaseBaseURL}family.webp?alt=media`,
+    };
+
+    const uniqueCategories = [...new Set(verbsData.map((verb) => verb.category))];
+
+    elements.categoriesContainer.innerHTML = uniqueCategories
+        .map(
+            (category) => `
+        <button 
+            class="category" 
+            data-category="${category}" 
+            style="background-image: url('${
+                categoryImages[category] || `${firebaseBaseURL}default.webp?alt=media`
+            }');">
+            ${category.charAt(0).toUpperCase() + category.slice(1)}
+        </button>
+    `
+        )
+        .join("");
+
+    document.querySelectorAll(".category").forEach((button) => {
+        button.addEventListener("click", (event) => {
+            const selectedCategory = event.target.getAttribute("data-category");
+            filterVerbsByCategory(selectedCategory);
+            startGame();
+        });
+    });
+
+    elements.categorySelection.classList.remove("hidden");
+}
+
+function filterVerbsByCategory(categoryName) {
     verbs = verbsData
-        .filter(item => item.id === String(categoryId) && item.hasImage)
-        .map(item => item.verb);
+        .filter((item) => item.category.toLowerCase() === categoryName.toLowerCase() && item.hasImage)
+        .map((item) => item.verb);
     totalQuestions = verbs.length;
 
     if (verbs.length === 0) {
-        throw new Error("Nenhum verbo com imagem foi encontrado para esta categoria.");
+        alert("Nenhum verbo com imagem foi encontrado para esta categoria.");
     }
-    console.log(`Verbos da categoria ${categoryId} carregados:`, verbs);
-}
-
-function preloadImagesAsync(urls) {
-    urls.forEach(url => {
-        const img = new Image();
-        img.src = url;
-    });
 }
 
 function startGame() {
-    if (!isDataLoaded) return;
-    elements.coverContainer.classList.add("hidden");
+    elements.categorySelection.classList.add("hidden");
     elements.questionSection.classList.remove("hidden");
+    currentQuestion = 0;
     displayQuestion();
-}
-
-function shuffleArray(array) {
-    return array.sort(() => Math.random() - 0.5);
-}
-
-function generateOptions(correctVerb) {
-    const options = [correctVerb];
-    while (options.length < 4) {
-        const randomVerb = verbs[Math.floor(Math.random() * verbs.length)];
-        if (!options.includes(randomVerb)) {
-            options.push(randomVerb);
-        }
-    }
-    return shuffleArray(options);
 }
 
 function displayQuestion() {
@@ -113,15 +126,34 @@ function displayQuestion() {
     elements.questionElement.innerText = "What does this image represent?";
 
     const options = generateOptions(correctVerb);
-    elements.optionsElement.innerHTML = options.map(option => `
+    elements.optionsElement.innerHTML = options
+        .map(
+            (option) => `
         <div class="option" data-verb="${option}">${option}</div>
-    `).join("");
+    `
+        )
+        .join("");
 
     attachOptionListeners(correctVerb);
 }
 
+function generateOptions(correctVerb) {
+    const options = [correctVerb];
+    while (options.length < 4) {
+        const randomVerb = verbs[Math.floor(Math.random() * verbs.length)];
+        if (!options.includes(randomVerb)) {
+            options.push(randomVerb);
+        }
+    }
+    return shuffleArray(options);
+}
+
+function shuffleArray(array) {
+    return array.sort(() => Math.random() - 0.5);
+}
+
 function attachOptionListeners(correctVerb) {
-    document.querySelectorAll(".option").forEach(option => {
+    document.querySelectorAll(".option").forEach((option) => {
         option.addEventListener("click", () => handleAnswer(option.getAttribute("data-verb"), correctVerb));
     });
 }
@@ -159,15 +191,13 @@ function endGame() {
 }
 
 elements.playAgainButton.addEventListener("click", () => {
-    if (!isDataLoaded) return;
-    location.reload();
+    currentQuestion = 0;
+    score = 0;
+    chosenAnswers = [];
+    elements.resultSection.classList.add("hidden");
+    elements.categorySelection.classList.remove("hidden");
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
-    elements.coverImage.innerText = "Loading data...";
     await loadVerbsFromCSV();
-    preloadImagesAsync(verbs.map(verb => `${firebaseBaseURL}${verb}.webp?alt=media`));
-    elements.coverImage.innerText = "Click to Start!";
 });
-
-elements.coverImage.addEventListener("click", () => startGame());
