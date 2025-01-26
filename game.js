@@ -42,7 +42,7 @@ function parseCSV(csvText) {
     const rows = csvText.split("\n").slice(1);
     return rows
         .map((row) => {
-            const [categoryName, categoryId, verb, image] = row.split(",");
+            const [categoryName, categoryId, verb] = row.split(",");
             if (!categoryName || !categoryId || !verb) {
                 return null;
             }
@@ -50,7 +50,6 @@ function parseCSV(csvText) {
                 category: categoryName.trim(),
                 id: categoryId.trim(),
                 verb: verb.trim(),
-                hasImage: image?.trim().toLowerCase() === "yes",
             };
         })
         .filter(Boolean);
@@ -96,12 +95,12 @@ function displayCategories() {
 
 function filterVerbsByCategory(categoryName) {
     verbs = verbsData
-        .filter((item) => item.category.toLowerCase() === categoryName.toLowerCase() && item.hasImage)
+        .filter((item) => item.category.toLowerCase() === categoryName.toLowerCase())
         .map((item) => item.verb);
     totalQuestions = verbs.length;
 
     if (verbs.length === 0) {
-        alert("Nenhum verbo com imagem foi encontrado para esta categoria.");
+        alert("Nenhum verbo foi encontrado para esta categoria.");
     }
 }
 
@@ -159,7 +158,7 @@ function attachOptionListeners(correctVerb) {
 }
 
 function handleAnswer(selectedVerb, correctVerb) {
-    document.querySelectorAll(".option").forEach(option => {
+    document.querySelectorAll(".option").forEach((option) => {
         option.style.pointerEvents = "none";
         const verb = option.getAttribute("data-verb");
         option.style.backgroundColor = verb === correctVerb ? "#6ad089" : verb === selectedVerb ? "#ff4d4e" : "";
@@ -176,7 +175,6 @@ function handleAnswer(selectedVerb, correctVerb) {
 function endGame() {
     elements.questionSection.classList.add("hidden");
     elements.resultSection.classList.remove("hidden");
-
 
     elements.resultElement.innerHTML = `
     <p class="result-score">You got <span class="score">${score}</span> out of <span class="total">${totalQuestions}</span> correct!</p>
