@@ -56,15 +56,13 @@ function parseCSV(csvText) {
 }
 
 function displayCategories() {
-    const categoryImages = {
-        basic: `${firebaseBaseURL}basic.webp?alt=media`,
-        fitness: `${firebaseBaseURL}fitness.webp?alt=media`,
-        business: `${firebaseBaseURL}business.webp?alt=media`,
-        tourism: `${firebaseBaseURL}tourism.webp?alt=media`,
-        academic: `${firebaseBaseURL}academic.webp?alt=media`,
-        family: `${firebaseBaseURL}family.webp?alt=media`,
-    };
-
+    const categoryImages = {}
+    
+    verbsData.forEach(({ category }) => {
+        if (!categoryImages[category]) {
+            categoryImages[category] = `${firebaseBaseURL}${category.replace(/\s+/g, '_')}.webp?alt=media`;
+        }
+    });
     const uniqueCategories = [...new Set(verbsData.map((verb) => verb.category))];
 
     elements.categoriesContainer.innerHTML = uniqueCategories
