@@ -1,199 +1,209 @@
 const sheetCSVURL = "https://script.google.com/macros/s/AKfycbyuaknQikwyWMkbiVYF6x46IQgVRGMulj9ujN-gOFLx1XW92QGEUwqTVK-LcU4nckxh8A/exec";
 const firebaseBaseURL = "https://firebasestorage.googleapis.com/v0/b/irregularverbslingualize.appspot.com/o/images%2F";
-let verbsData = [];
-let verbs = [];
-let currentQuestion = 0;
-let score = 0;
-let chosenAnswers = [];
-let totalQuestions = 0;
-let isDataLoaded = false;
 
+let verbsData = [], verbs = [], currentQuestion = 0, score = 0, chosenAnswers = [], totalQuestions = 0, isDataLoaded = false, currentPhase = 1;
 const elements = {
-    questionImage: document.getElementById("question-image"),
-    questionElement: document.getElementById("question"),
-    optionsElement: document.getElementById("options"),
-    resultSection: document.getElementById("result-section"),
-    resultElement: document.getElementById("result"),
-    playAgainButton: document.getElementById("play-again"),
-    questionSection: document.getElementById("question-section"),
-    categorySelection: document.getElementById("category-selection"),
-    categoriesContainer: document.getElementById("categories"),
+  questionImage: document.getElementById("question-image"),
+  questionElement: document.getElementById("question"),
+  optionsElement: document.getElementById("options"),
+  resultSection: document.getElementById("result-section"),
+  resultElement: document.getElementById("result"),
+  playAgainButton: document.getElementById("play-again"),
+  questionSection: document.getElementById("question-section"),
+  categorySelection: document.getElementById("category-selection"),
+  categoriesContainer: document.getElementById("categories"),
+  phaseSelection: document.getElementById("phase-selection")
 };
+const imageContainer = document.getElementById("image-container");
+const imageCache = {};
+
+(async () => {
+  await loadVerbsFromCSV();
+})();
 
 async function loadVerbsFromCSV() {
-    try {
-        const response = await fetch(sheetCSVURL);
-        if (!response.ok) {
-            throw new Error(`Erro ao acessar o CSV: ${response.statusText}`);
-        }
-        const csvText = await response.text();
-        verbsData = parseCSV(csvText);
-        if (verbsData.length === 0) {
-            throw new Error("Nenhum dado foi carregado do CSV.");
-        }
-        isDataLoaded = true;
-        displayCategories();
-    } catch (error) {
-        alert(`Erro ao acessar o CSV: ${error.message}`);
-    }
+  try {
+    const res = await fetch(sheetCSVURL);
+    if (!res.ok) throw new Error(`Erro ao acessar o CSV: ${res.statusText}`);
+    const csvText = await res.text();
+    verbsData = parseCSV(csvText);
+    if (!verbsData.length) throw new Error("Nenhum dado foi carregado do CSV.");
+    isDataLoaded = true;
+    displayCategories();
+  } catch (e) {
+    alert(`Erro ao acessar o CSV: ${e.message}`);
+  }
 }
 
-function parseCSV(csvText) {
-    const rows = csvText.split("\n").slice(1);
-    return rows
-        .map((row) => {
-            const [categoryName, categoryId, verb] = row.split(",");
-            if (!categoryName || !categoryId || !verb) {
-                return null;
-            }
-            return {
-                category: categoryName.trim(),
-                id: categoryId.trim(),
-                verb: verb.trim(),
-            };
-        })
-        .filter(Boolean);
+function parseCSV(text) {
+  return text.split("\n").slice(1)
+    .map(row => {
+      const [cat, id, verb] = row.split(",");
+      if (!cat || !id || !verb) return null;
+      return { category: cat.trim(), id: id.trim(), verb: verb.trim() };
+    })
+    .filter(Boolean);
 }
 
 function displayCategories() {
-    const categoryImages = {}
-    
-    verbsData.forEach(({ category }) => {
-        if (!categoryImages[category]) {
-            categoryImages[category] = `${firebaseBaseURL}${category.replace(/\s+/g, '_')}.webp?alt=media`;
-        }
+  const catImages = {};
+  verbsData.forEach(({ category }) => {
+    if (!catImages[category]) {
+      catImages[category] = `${firebaseBaseURL}${encodeURIComponent(category)}.webp?alt=media`;
+    }
+  });
+  const uniqueCats = [...new Set(verbsData.map(item => item.category))];
+  elements.categoriesContainer.innerHTML = uniqueCats
+    .map(cat => `
+      <button class="category" data-category="${cat}" style="background-image: url('${catImages[cat]}');">
+        ${cat.charAt(0).toUpperCase() + cat.slice(1)}
+      </button>
+    `).join("");
+  document.querySelectorAll(".category").forEach(btn => {
+    btn.addEventListener("click", e => {
+      const selectedCat = e.currentTarget.getAttribute("data-category");
+      filterVerbsByCategory(selectedCat);
+      displayPhaseSelection();
     });
-    const uniqueCategories = [...new Set(verbsData.map((verb) => verb.category))];
-
-    elements.categoriesContainer.innerHTML = uniqueCategories
-        .map(
-            (category) => `
-        <button 
-            class="category" 
-            data-category="${category}" 
-            style="background-image: url('${
-                categoryImages[category] || `${firebaseBaseURL}default.webp?alt=media`
-            }');">
-            ${category.charAt(0).toUpperCase() + category.slice(1)}
-        </button>
-    `
-        )
-        .join("");
-
-    document.querySelectorAll(".category").forEach((button) => {
-        button.addEventListener("click", (event) => {
-            const selectedCategory = event.target.getAttribute("data-category");
-            filterVerbsByCategory(selectedCategory);
-            startGame();
-        });
-    });
-
-    elements.categorySelection.classList.remove("hidden");
+  });
+  elements.categorySelection.classList.remove("hidden");
 }
 
-function filterVerbsByCategory(categoryName) {
-    verbs = verbsData
-        .filter((item) => item.category.toLowerCase() === categoryName.toLowerCase())
-        .map((item) => item.verb);
-    totalQuestions = verbs.length;
+function filterVerbsByCategory(catName) {
+  verbs = verbsData.filter(item => item.category.toLowerCase() === catName.toLowerCase()).map(item => item.verb);
+  totalQuestions = verbs.length;
+  if (!verbs.length) alert("Nenhum verbo foi encontrado para esta categoria.");
+  preloadImages(verbs);
+}
 
-    if (verbs.length === 0) {
-        alert("Nenhum verbo foi encontrado para esta categoria.");
+function preloadImages(list) {
+  list.forEach(verb => {
+    const url = `${firebaseBaseURL}${encodeURIComponent(verb)}.webp?alt=media`;
+    if (!imageCache[url]) {
+      const img = new Image();
+      img.src = url;
+      img.loading = "lazy";
+      imageCache[url] = img;
     }
+  });
+}
+
+function displayPhaseSelection() {
+  elements.categorySelection.classList.add("hidden");
+  elements.phaseSelection.innerHTML = `
+    <h2>Escolha a Fase</h2>
+    <button class="phase" data-phase="1">Phase 1<br><small>Palavra/Imagem</small></button>
+    <button class="phase" data-phase="2">Phase 2<br><small>Imagem/Palavra</small></button>
+  `;
+  elements.phaseSelection.classList.remove("hidden");
+  document.querySelectorAll(".phase").forEach(btn => {
+    btn.addEventListener("click", e => {
+      currentPhase = parseInt(e.currentTarget.getAttribute("data-phase"));
+      elements.phaseSelection.classList.add("hidden");
+      startGame();
+    });
+  });
 }
 
 function startGame() {
-    elements.categorySelection.classList.add("hidden");
-    elements.questionSection.classList.remove("hidden");
-    currentQuestion = 0;
-    displayQuestion();
+  currentQuestion = 0; score = 0; chosenAnswers = [];
+  elements.categorySelection.classList.add("hidden");
+  elements.phaseSelection.classList.add("hidden");
+  elements.questionSection.classList.remove("hidden");
+  document.querySelector("h1").innerText = `Imperative Game - Phase ${currentPhase}`;
+  displayQuestion();
 }
 
 function displayQuestion() {
-    if (currentQuestion >= totalQuestions) {
-        endGame();
-        return;
-    }
-
-    const correctVerb = verbs[currentQuestion];
-    const imageUrl = `${firebaseBaseURL}${correctVerb}.webp?alt=media`;
-
-    elements.questionImage.src = imageUrl;
+  if (currentQuestion >= totalQuestions) return endGame();
+  const correctVerb = verbs[currentQuestion];
+  if (currentPhase === 1) {
+    imageContainer.style.display = "block";
+    imageContainer.style.paddingTop = "56.25%";
+    imageContainer.style.height = "";
+    elements.questionImage.style.display = "block";
+    const url = `${firebaseBaseURL}${encodeURIComponent(correctVerb)}.webp?alt=media`;
+    elements.questionImage.src = url;
     elements.questionImage.alt = correctVerb;
+    elements.questionImage.setAttribute("loading", "lazy");
     elements.questionElement.innerText = "What does this image represent?";
-
-    const options = generateOptions(correctVerb);
-    elements.optionsElement.innerHTML = options
-        .map(
-            (option) => `
-        <div class="option" data-verb="${option}">${option}</div>
-    `
-        )
-        .join("");
-
-    attachOptionListeners(correctVerb);
+    elements.optionsElement.classList.remove("phase2");
+  } else if (currentPhase === 2) {
+    elements.questionImage.style.display = "none";
+    imageContainer.style.paddingTop = "0";
+    imageContainer.style.height = "0";
+    elements.questionElement.innerText = `Which image represents the word: "${correctVerb}"?`;
+    elements.optionsElement.classList.add("phase2");
+  }
+  const options = generateOptions(correctVerb);
+  elements.optionsElement.innerHTML = options.map(opt => getOptionHTML(opt)).join("");
 }
 
 function generateOptions(correctVerb) {
-    const options = [correctVerb];
-    while (options.length < 4) {
-        const randomVerb = verbs[Math.floor(Math.random() * verbs.length)];
-        if (!options.includes(randomVerb)) {
-            options.push(randomVerb);
-        }
-    }
-    return shuffleArray(options);
+  const opts = [correctVerb];
+  while (opts.length < 4) {
+    const random = verbs[Math.floor(Math.random() * verbs.length)];
+    if (!opts.includes(random)) opts.push(random);
+  }
+  return shuffleArray(opts);
 }
 
-function shuffleArray(array) {
-    return array.sort(() => Math.random() - 0.5);
+function shuffleArray(arr) {
+  return arr.sort(() => Math.random() - 0.5);
 }
 
-function attachOptionListeners(correctVerb) {
-    document.querySelectorAll(".option").forEach((option) => {
-        option.addEventListener("click", () => handleAnswer(option.getAttribute("data-verb"), correctVerb));
-    });
+function getOptionHTML(option) {
+  if (currentPhase === 1) {
+    return `<div class="option" data-verb="${option}">${option}</div>`;
+  } else if (currentPhase === 2) {
+    const url = `${firebaseBaseURL}${encodeURIComponent(option)}.webp?alt=media`;
+    return `<div class="option" data-verb="${option}">
+              <img src="${url}" alt="${option}" loading="lazy">
+            </div>`;
+  }
+  return `<div class="option" data-verb="${option}">${option}</div>`;
 }
+
+elements.optionsElement.addEventListener("click", e => {
+  const optionEl = e.target.closest(".option");
+  if (!optionEl || optionEl.style.pointerEvents === "none") return;
+  const selectedVerb = optionEl.getAttribute("data-verb");
+  const correctVerb = verbs[currentQuestion];
+  handleAnswer(selectedVerb, correctVerb);
+});
 
 function handleAnswer(selectedVerb, correctVerb) {
-    document.querySelectorAll(".option").forEach((option) => {
-        option.style.pointerEvents = "none";
-        const verb = option.getAttribute("data-verb");
-        option.style.backgroundColor = verb === correctVerb ? "#6ad089" : verb === selectedVerb ? "#ff4d4e" : "";
-    });
-
-    const isCorrect = selectedVerb === correctVerb;
-    score += isCorrect ? 1 : 0;
-
-    chosenAnswers.push({ question: correctVerb, correct: isCorrect });
-    currentQuestion++;
-    setTimeout(displayQuestion, 800);
+  document.querySelectorAll(".option").forEach(option => {
+    option.style.pointerEvents = "none";
+    const verb = option.getAttribute("data-verb");
+    option.style.backgroundColor = (verb === correctVerb) ? "#6ad089" : (verb === selectedVerb ? "#ff4d4e" : "");
+  });
+  const isCorrect = selectedVerb === correctVerb;
+  score += isCorrect ? 1 : 0;
+  chosenAnswers.push({ question: correctVerb, correct: isCorrect });
+  currentQuestion++;
+  setTimeout(displayQuestion, 800);
 }
 
 function endGame() {
-    elements.questionSection.classList.add("hidden");
-    elements.resultSection.classList.remove("hidden");
-
-    elements.resultElement.innerHTML = `
+  elements.questionSection.classList.add("hidden");
+  elements.resultSection.classList.remove("hidden");
+  elements.resultElement.innerHTML = `
     <p class="result-score">You got <span class="score">${score}</span> out of <span class="total">${totalQuestions}</span> correct!</p>
     <ul class="result-list">
-        ${chosenAnswers.map(({ question, correct }) => `
-            <li class="result-item" style="background-color: ${correct ? '#6ad089' : '#ff4d4e'}; border: 1px solid ${correct ? '#c3e6cb' : '#f5c6cb'}">
-                <span class="result-verb">${question}</span>
-            </li>
-        `).join("")}
+      ${chosenAnswers.map(({ question, correct }) => `
+          <li class="result-item" style="background-color: ${correct ? "#6ad089" : "#ff4d4e"}; border: 1px solid ${correct ? "#c3e6cb" : "#f5c6cb"}">
+            <span class="result-verb">${question}</span>
+          </li>
+      `).join("")}
     </ul>
-`;
+  `;
 }
 
 elements.playAgainButton.addEventListener("click", () => {
-    currentQuestion = 0;
-    score = 0;
-    chosenAnswers = [];
-    elements.resultSection.classList.add("hidden");
-    elements.categorySelection.classList.remove("hidden");
-});
-
-document.addEventListener("DOMContentLoaded", async () => {
-    await loadVerbsFromCSV();
+  currentQuestion = 0;
+  score = 0;
+  chosenAnswers = [];
+  elements.resultSection.classList.add("hidden");
+  elements.categorySelection.classList.remove("hidden");
 });
