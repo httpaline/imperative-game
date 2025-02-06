@@ -17,9 +17,7 @@ const elements = {
 const imageContainer = document.getElementById("image-container");
 const imageCache = {};
 
-(async () => {
-  await loadVerbsFromCSV();
-})();
+(async () => { await loadVerbsFromCSV(); })();
 
 async function loadVerbsFromCSV() {
   try {
@@ -30,9 +28,7 @@ async function loadVerbsFromCSV() {
     if (!verbsData.length) throw new Error("Nenhum dado foi carregado do CSV.");
     isDataLoaded = true;
     displayCategories();
-  } catch (e) {
-    alert(`Erro ao acessar o CSV: ${e.message}`);
-  }
+  } catch (e) { alert(`Erro ao acessar o CSV: ${e.message}`); }
 }
 
 function parseCSV(text) {
@@ -82,7 +78,8 @@ function preloadImages(list) {
     if (!imageCache[url]) {
       const img = new Image();
       img.src = url;
-      img.loading = "lazy";
+      img.loading = "eager";
+      img.decoding = "async";
       imageCache[url] = img;
     }
   });
@@ -125,14 +122,15 @@ function displayQuestion() {
     const url = `${firebaseBaseURL}${encodeURIComponent(correctVerb)}.webp?alt=media`;
     elements.questionImage.src = url;
     elements.questionImage.alt = correctVerb;
-    elements.questionImage.setAttribute("loading", "lazy");
+    elements.questionImage.setAttribute("loading", "eager");
     elements.questionElement.innerText = "What does this image represent?";
     elements.optionsElement.classList.remove("phase2");
   } else if (currentPhase === 2) {
     elements.questionImage.style.display = "none";
     imageContainer.style.paddingTop = "0";
     imageContainer.style.height = "0";
-    elements.questionElement.innerText = `Which image represents the word: "${correctVerb}"?`;
+    elements.questionElement.innerText = `"${correctVerb}"`;
+    elements.questionElement.style.fontSize = "24px";
     elements.optionsElement.classList.add("phase2");
   }
   const options = generateOptions(correctVerb);
@@ -157,8 +155,10 @@ function getOptionHTML(option) {
     return `<div class="option" data-verb="${option}">${option}</div>`;
   } else if (currentPhase === 2) {
     const url = `${firebaseBaseURL}${encodeURIComponent(option)}.webp?alt=media`;
+    let cached = imageCache[url];
+    let src = cached ? cached.src : url;
     return `<div class="option" data-verb="${option}">
-              <img src="${url}" alt="${option}" loading="lazy">
+              <img src="${src}" alt="${option}" loading="eager" decoding="async">
             </div>`;
   }
   return `<div class="option" data-verb="${option}">${option}</div>`;
@@ -201,9 +201,7 @@ function endGame() {
 }
 
 elements.playAgainButton.addEventListener("click", () => {
-  currentQuestion = 0;
-  score = 0;
-  chosenAnswers = [];
+  currentQuestion = 0; score = 0; chosenAnswers = [];
   elements.resultSection.classList.add("hidden");
   elements.categorySelection.classList.remove("hidden");
 });
