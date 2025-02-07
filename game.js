@@ -134,9 +134,7 @@ function createExitButton() {
     exitBtn.style.float = "right";
 
     elements.questionSection.appendChild(exitBtn);
-    exitBtn.addEventListener("click", () => {
-      if (confirm("Deseja realmente sair do jogo?")) exitGame();
-    });
+    exitBtn.addEventListener("click", exitGame);
   }
 }
 
