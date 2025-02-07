@@ -28,7 +28,9 @@ async function loadVerbsFromCSV() {
     if (!verbsData.length) throw new Error("Nenhum dado foi carregado do CSV.");
     isDataLoaded = true;
     displayCategories();
-  } catch (e) { alert(`Erro ao acessar o CSV: ${e.message}`); }
+  } catch (e) { 
+    alert(`Erro ao acessar o CSV: ${e.message}`);
+  }
 }
 
 function parseCSV(text) {
@@ -88,9 +90,9 @@ function preloadImages(list) {
 function displayPhaseSelection() {
   elements.categorySelection.classList.add("hidden");
   elements.phaseSelection.innerHTML = `
-    <h2>Escolha a Fase</h2>
     <button class="phase" data-phase="1">Phase 1<br><small>Palavra/Imagem</small></button>
     <button class="phase" data-phase="2">Phase 2<br><small>Imagem/Palavra</small></button>
+    <button class="back-to-cat" style="background-color: #ff4d4e; color: white; border: none; padding: 5px 10px; font-size: 12px; border-radius: 4px; margin-top: 10px;">Back</button>
   `;
   elements.phaseSelection.classList.remove("hidden");
   document.querySelectorAll(".phase").forEach(btn => {
@@ -100,20 +102,56 @@ function displayPhaseSelection() {
       startGame();
     });
   });
+  document.querySelector(".back-to-cat").addEventListener("click", e => {
+    elements.phaseSelection.classList.add("hidden");
+    elements.categorySelection.classList.remove("hidden");
+  });
 }
 
 function startGame() {
-  currentQuestion = 0; score = 0; chosenAnswers = [];
+  currentQuestion = 0; 
+  score = 0; 
+  chosenAnswers = [];
   elements.categorySelection.classList.add("hidden");
   elements.phaseSelection.classList.add("hidden");
   elements.questionSection.classList.remove("hidden");
   document.querySelector("h1").innerText = `Imperative Game - Phase ${currentPhase}`;
+  createExitButton();
   displayQuestion();
+}
+
+function createExitButton() {
+  let exitBtn = document.getElementById("exit-game");
+  if (!exitBtn) {
+    exitBtn = document.createElement("button");
+    exitBtn.id = "exit-game";
+    exitBtn.innerText = "Exit";
+    exitBtn.style.backgroundColor = "#ff4d4e";
+    exitBtn.style.color = "white";
+    exitBtn.style.border = "none";
+    exitBtn.style.padding = "5px 10px";
+    exitBtn.style.fontSize = "12px";
+    exitBtn.style.borderRadius = "4px";
+    exitBtn.style.marginTop = "10px";
+    exitBtn.style.float = "right";
+   
+    elements.questionSection.appendChild(exitBtn);
+    exitBtn.addEventListener("click", () => {
+      if (confirm("Deseja realmente sair do jogo?")) exitGame();
+    });
+  }
+}
+
+function exitGame() {
+  elements.questionSection.classList.add("hidden");
+  elements.categorySelection.classList.remove("hidden");
+  document.querySelector("h1").innerText = "Imperative Game";
 }
 
 function displayQuestion() {
   if (currentQuestion >= totalQuestions) return endGame();
   const correctVerb = verbs[currentQuestion];
+
   if (currentPhase === 1) {
     imageContainer.style.display = "block";
     imageContainer.style.paddingTop = "56.25%";
@@ -124,15 +162,19 @@ function displayQuestion() {
     elements.questionImage.alt = correctVerb;
     elements.questionImage.setAttribute("loading", "eager");
     elements.questionElement.innerText = "What does this image represent?";
+    // Redefine o tamanho da fonte para a fase 1
+    elements.questionElement.style.fontSize = "24px";
     elements.optionsElement.classList.remove("phase2");
   } else if (currentPhase === 2) {
     elements.questionImage.style.display = "none";
     imageContainer.style.paddingTop = "0";
     imageContainer.style.height = "0";
-    elements.questionElement.innerText = `"${correctVerb}"`;
-    elements.questionElement.style.fontSize = "24px";
+    elements.questionElement.innerText = `${correctVerb}`;
+    // Define o tamanho da fonte para a fase 2
+    elements.questionElement.style.fontSize = "45px";
     elements.optionsElement.classList.add("phase2");
   }
+  
   const options = generateOptions(correctVerb);
   elements.optionsElement.innerHTML = options.map(opt => getOptionHTML(opt)).join("");
 }
