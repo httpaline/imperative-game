@@ -1,182 +1,235 @@
-#categories {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-    margin-top: 20px;
+/* fase 3 */
+.input-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
 }
 
+#text-answer {
+  padding: 10px 15px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+#submit-answer {
+  padding: 5px 10px;
+  font-size: 14px;
+  border-radius: 4px;
+  background-color: #1d3561;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#submit-answer:hover {
+  background-color: #80bce1;
+}
+
+/* Container de categorias */
+#categories {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* Botões de categoria */
 .category {
-   
-    width: 200px;
-    height: 150px;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    color: white;
-    font-size: 18px;
-    font-weight: bold;
-    text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  width: 200px;
+  height: 150px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .category:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
+/* Estilos globais */
 body {
-    font-family: 'Raleway', sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #f0f0f0;
-    margin: 0;
+  font-family: 'Raleway', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f0f0;
+  margin: 0;
 }
 
+/* Container principal do jogo */
 #game {
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    max-width: 500px;
-    width: 100%;
-    text-align: center;
-    border: 2px solid #1d3561;
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  border: 2px solid #1d3561;
 }
 
-#game h1 {
-    margin-top: 0;
-    color: #1d3561;
+/* Header: título e botão de exit */
+#game-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 20px;
 }
 
-#game h2 {
-    color: #1d3561;
+#phase-title {
+  margin: 0;
+  color: #1d3561;
+  font-size: 24px;
 }
 
-#cover-container img {
-    max-width: 100%;
-    border-radius: 8px;
-    margin-bottom: 20px;
+/* Botão de exit posicionado à esquerda */
+#exit-game {
+  position: absolute;
+  left: 10px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
 }
 
+/* Classe para ocultar elementos */
 .hidden {
-    display: none;
+  display: none;
 }
 
+/* Container de imagem das perguntas */
 #image-container {
-    position: relative;
-    width: 100%;
-    padding-top: 56.25%; 
-    overflow: hidden;
-    border-radius: 8px;
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* proporção 16:9 */
+  overflow: hidden;
+  border-radius: 8px;
 }
 
 #image-container img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
+/* Container de opções das perguntas */
 .options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 15px;
 }
 
 .option {
-    flex: 1 1 45%;
-    padding: 10px;
-    background: #e0e0e0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s;
+  flex: 1 1 45%;
+  padding: 10px;
+  background: #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 
 .option:hover {
-    background: #d0d0d0;
+  background: #d0d0d0;
 }
 
+/* fase 2 */
 .options.phase2 {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    justify-items: center;
-    align-items: center;
-    margin-top: 0px;  
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  justify-items: center;
+  align-items: center;
+  margin-top: 0;
 }
 
 .options.phase2 .option img {
-    width: 100%;
-    max-width: 350px;  
-    height: auto;
-    display: block;
+  width: 100%;
+  max-width: 350px;
+  height: auto;
+  display: block;
 }
 
+/* Estilos de resultado */
 #result {
-    margin-top: 20px;
-    font-size: 18px;
-    font-weight: bold;
-}
-
-button {
-    background-color: #1d3561;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    border-radius: 4px;
-    margin-top: 10px;
-}
-
-button:hover {
-    background-color: #80bce1;
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: bold;
 }
 
 .result-score {
-    font-size: 1.5rem;
-    text-align: center;
-    margin-bottom: 2rem;
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
 }
 
 .result-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 auto;
-    max-width: 400px;
+  list-style: none;
+  padding: 0;
+  margin: 0 auto;
+  max-width: 400px;
 }
 
 .result-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.3rem 0.5rem;
-    margin-bottom: 0.3rem;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: background-color 0.3s, border 0.3s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.3rem 0.5rem;
+  margin-bottom: 0.3rem;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.3s, border 0.3s;
 }
 
 .result-verb {
-    font-weight: bold;
-    flex-grow: 1;
+  font-weight: bold;
+  flex-grow: 1;
 }
 
 .result-status {
-    margin-left: 1rem;
-    font-weight: bold;
+  margin-left: 1rem;
+  font-weight: bold;
+}
+
+/* Botões gerais */
+button {
+  background-color: #1d3561;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+
+button:hover {
+  background-color: #80bce1;
 }

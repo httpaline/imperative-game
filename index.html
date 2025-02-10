@@ -1,41 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Imperative Game</title>
-  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <div id="game">
-    <h1>Imperative Game</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Imperative Game</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap"
+      rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
 
-    
-    <div id="category-selection">
-      <h2>Choose a Category</h2>
-      <div id="categories"></div>
-    </div>
+    <div id="game">
 
-    
-    <div id="phase-selection" class="hidden"></div>
+      <header id="game-header">
+        <h1 id="phase-title">Imperative Game</h1>
+      </header>
 
-   
-    <div id="question-section" class="hidden">
-      <div id="image-container">
-        <img id="question-image" src="" alt="Question Image" />
+      <div id="category-selection">
+        <h2>Choose a Category</h2>
+        <div id="categories"></div>
       </div>
-      <p id="question"></p>
-      <div class="options" id="options"></div>
+
+      <div id="phase-selection" class="hidden"></div>
+
+      <div id="question-section" class="hidden">
+        <div id="image-container">
+          <img id="question-image" src alt="Question Image" />
+        </div>
+        <p id="question"></p>
+        <div class="options" id="options"></div>
+      </div>
+
+      <div id="result-section" class="hidden">
+        <p id="result"></p>
+        <button id="play-again">Play Again</button>
+      </div>
     </div>
 
-  
-    <div id="result-section" class="hidden">
-      <p id="result"></p>
-      <button id="play-again">Play Again</button>
-    </div>
-  </div>
-
-  <script src="game.js"></script>
-</body>
+    <script src="game.js"></script>
+  </body>
 </html>
