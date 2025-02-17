@@ -1,9 +1,10 @@
 //links
 const sheetCSVURL = "https://script.google.com/macros/s/AKfycbyuaknQikwyWMkbiVYF6x46IQgVRGMulj9ujN-gOFLx1XW92QGEUwqTVK-LcU4nckxh8A/exec";
 const firebaseBaseURL = "https://firebasestorage.googleapis.com/v0/b/irregularverbslingualize.appspot.com/o/images%2F";
+const firebaseVoiceBaseURL = "https://firebasestorage.googleapis.com/v0/b/irregularverbslingualize.appspot.com/o/voice%2F";
 const ANSWER_DELAY = 800;
 
-//variables
+//variáveis
 let verbsData = [],
     verbs = [],
     currentQuestion = 0,
@@ -30,6 +31,7 @@ const elements = {
 const imageContainer = document.getElementById("image-container");
 const imageCache = {};
 const getImageUrl = name => `${firebaseBaseURL}${encodeURIComponent(name)}.webp?alt=media`;
+const getVoiceUrl = name => `${firebaseVoiceBaseURL}${encodeURIComponent(name)}.aac?alt=media`;
 
 (async () => { await loadVerbsFromCSV(); })();
 
@@ -117,7 +119,8 @@ function displayPhaseSelection() {
   elements.phaseSelection.innerHTML = `
     <button class="phase" data-phase="1">Phase 1<br><small>Palavra/Imagem</small></button>
     <button class="phase" data-phase="2">Phase 2<br><small>Imagem/Palavra</small></button>
-    <button class="phase" data-phase="3">Phase 3<br><small>Imagem/Palavra Digitada</small></button>
+    <button class="phase" data-phase="3">Phase 3<br><small>Imagem/Palavra</small></button>
+    <button class="phase" data-phase="4">Phase 4<br><small>Áudio/Palavra</small></button>
   `;
   elements.phaseSelection.classList.remove("hidden");
 
@@ -164,6 +167,7 @@ function createExitButton() {
 function exitGame() {
   elements.questionSection.classList.add("hidden");
   elements.phaseSelection.classList.add("hidden");
+  elements.resultSection.classList.add("hidden");
   elements.categorySelection.classList.remove("hidden");
   const exitBtn = document.getElementById("exit-game");
   if (exitBtn) {
@@ -190,13 +194,13 @@ function displayQuestion() {
   const correctVerb = verbs[currentQuestion];
 
   if (currentPhase === 1) {
-    // Fase 1: Imagem e opções de resposta em texto
+    // Phase 1: Imagem -> Palavra
     setupImageQuestion(correctVerb, null);
     elements.optionsElement.classList.remove("phase2");
     const options = generateOptions(correctVerb);
     elements.optionsElement.innerHTML = options.map(getOptionHTML).join("");
   } else if (currentPhase === 2) {
-    // Fase 2: Palavra e opções de resposta em imagens
+    // Phase 2: Palavra -> Imagem
     imageContainer.style.display = "none";
     imageContainer.style.paddingTop = "0";
     imageContainer.style.height = "0";
@@ -206,15 +210,43 @@ function displayQuestion() {
     const options = generateOptions(correctVerb);
     elements.optionsElement.innerHTML = options.map(getOptionHTML).join("");
   } else if (currentPhase === 3) {
-    // Fase 3: Imagem e campo de texto para resposta
+    // Phase 3: Imagem + Input de texto
     setupImageQuestion(correctVerb, null);
     elements.optionsElement.classList.remove("phase2");
     elements.optionsElement.innerHTML = `
       <div class="input-container">
-        <input type="text" id="text-answer"  autofocus />
+        <input type="text" id="text-answer" autofocus />
         <button id="submit-answer">Enviar</button>
       </div>
     `;
+    document.getElementById("submit-answer").addEventListener("click", () => {
+      handleAnswer(null, correctVerb);
+    });
+    document.getElementById("text-answer").addEventListener("keydown", e => {
+      if (e.key === "Enter") handleAnswer(null, correctVerb);
+    });
+  } else if (currentPhase === 4) {
+    // Phase 4: Áudio + Input de texto 
+    imageContainer.style.display = "none";
+    imageContainer.style.paddingTop = "0";
+    imageContainer.style.height = "0";
+    elements.questionElement.innerText = "";
+    elements.optionsElement.classList.remove("phase2");
+    elements.optionsElement.innerHTML = `
+      <div class="phase4-container" style="display: flex; flex-direction: column; align-items: center;">
+        <div class="audio-container" style="margin-bottom: 20px;">
+          <button id="play-audio" style="width: 100px; height: 100px; border-radius: 50%; border: none; background-color: #1d3561; font-size: 40px; display: flex; justify-content: center; align-items: center;">▶</button>
+        </div>
+        <div class="input-container">
+          <input type="text" id="text-answer" autofocus />
+          <button id="submit-answer">Enviar</button>
+        </div>
+      </div>
+    `;
+    document.getElementById("play-audio").addEventListener("click", () => {
+      const audio = new Audio(getVoiceUrl(correctVerb));
+      audio.play();
+    });
     document.getElementById("submit-answer").addEventListener("click", () => {
       handleAnswer(null, correctVerb);
     });
@@ -255,7 +287,7 @@ function getOptionHTML(option) {
 }
 
 elements.optionsElement.addEventListener("click", e => {
-  if (currentPhase === 3) return;
+  if (currentPhase === 3 || currentPhase === 4) return;
   const optionEl = e.target.closest(".option");
   if (!optionEl || optionEl.style.pointerEvents === "none") return;
   const selectedVerb = optionEl.getAttribute("data-verb");
@@ -271,7 +303,7 @@ function recordAnswer(correctVerb, isCorrect) {
 }
 
 function handleAnswer(selectedVerb, correctVerb) {
-  if (currentPhase === 3) {
+  if (currentPhase === 3 || currentPhase === 4) {
     const inputEl = document.getElementById("text-answer");
     if (!inputEl) return;
     const answer = inputEl.value.trim();
@@ -294,20 +326,65 @@ function endGame() {
   elements.questionSection.classList.add("hidden");
   elements.resultSection.classList.remove("hidden");
   elements.resultElement.innerHTML = `
-    <p class="result-score">You got <span class="score">${score}</span> out of <span class="total">${totalQuestions}</span> correct!</p>
+    <p class="result-score">Você acertou <span class="score">${score}</span> de <span class="total">${totalQuestions}</span>!</p>
     <ul class="result-list">
       ${chosenAnswers
-        .map(({ question, correct }) => `
+        .map(
+          ({ question, correct }) => `
           <li class="result-item" style="background-color: ${correct ? "#6ad089" : "#ff4d4e"}; border: 1px solid ${correct ? "#c3e6cb" : "#f5c6cb"}">
             <span class="result-verb">${question}</span>
           </li>
-        `)
+        `
+        )
         .join("")}
     </ul>
   `;
-  const exitBtn = document.getElementById("exit-game");
-  if (exitBtn) {
-    exitBtn.remove();
+
+  let buttonsContainer = document.getElementById("result-buttons");
+  if (!buttonsContainer) {
+    buttonsContainer = document.createElement("div");
+    buttonsContainer.id = "result-buttons";
+    buttonsContainer.style.display = "flex";
+    buttonsContainer.style.width = "100%";
+    buttonsContainer.style.marginTop = "20px";
+    elements.resultSection.appendChild(buttonsContainer);
+  } else {
+    buttonsContainer.innerHTML = "";
+  }
+
+  const playAgainContainer = document.createElement("div");
+  playAgainContainer.style.flex = "1";
+  playAgainContainer.style.display = "flex";
+  playAgainContainer.style.justifyContent = "center";
+  playAgainContainer.appendChild(elements.playAgainButton);
+  buttonsContainer.appendChild(playAgainContainer);
+
+  if (currentPhase < 4) {
+    const nextContainer = document.createElement("div");
+    nextContainer.style.display = "flex";
+    nextContainer.style.justifyContent = "flex-end";
+    nextContainer.style.paddingRight = "40px";
+    
+    const nextPhaseBtn = document.createElement("button");
+    nextPhaseBtn.id = "next-phase";
+    nextPhaseBtn.style.background = "transparent";
+    nextPhaseBtn.style.border = "none";
+    nextPhaseBtn.style.cursor = "pointer";
+    nextPhaseBtn.style.gap = "5px";
+    nextPhaseBtn.innerHTML = `<img src="${getImageUrl('next')}" alt="Next Phase" style="width:20px; height:20px;">`;
+    nextPhaseBtn.addEventListener("click", () => {
+      currentPhase++;
+      currentQuestion = 0;
+      score = 0;
+      chosenAnswers = [];
+      document.getElementById("phase-title").innerText = `Imperative Game - Phase ${currentPhase}`;
+      elements.resultSection.classList.add("hidden");
+      elements.questionSection.classList.remove("hidden");
+      startGame();
+    });
+
+    nextContainer.appendChild(nextPhaseBtn);
+    buttonsContainer.appendChild(nextContainer);
   }
 }
 
@@ -316,10 +393,7 @@ elements.playAgainButton.addEventListener("click", () => {
   score = 0;
   chosenAnswers = [];
   elements.resultSection.classList.add("hidden");
-  elements.categorySelection.classList.remove("hidden");
-  const exitBtn = document.getElementById("exit-game");
-  if (exitBtn) {
-    exitBtn.remove();
-  }
-  document.getElementById("phase-title").innerText = `Imperative Game`;
+  elements.questionSection.classList.remove("hidden");
+  document.getElementById("phase-title").innerText = `Imperative Game - Phase ${currentPhase}`;
+  startGame();
 });
