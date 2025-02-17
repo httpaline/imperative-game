@@ -55,8 +55,14 @@ function parseCSV(text) {
     .split("\n")
     .slice(1)
     .map(row => {
-      const [cat, id, verb] = row.split(",");
-      return (cat && id && verb) ? { category: cat.trim(), id: id.trim(), verb: verb.trim() } : null;
+      const parts = row.split(",");
+      if (parts.length >= 4) {
+        const [cat, id, verb, translation] = parts;
+        return (cat && id && verb) ? { category: cat.trim(), id: id.trim(), verb: verb.trim(), translation: translation.trim() } : null;
+      } else {
+        const [cat, id, verb] = parts;
+        return (cat && id && verb) ? { category: cat.trim(), id: id.trim(), verb: verb.trim(), translation: "" } : null;
+      }
     })
     .filter(Boolean);
 }
@@ -77,13 +83,26 @@ function displayCategories() {
     `)
     .join("");
 
-  document.querySelectorAll(".category").forEach(btn =>
-    btn.addEventListener("click", e => {
-      const selectedCat = e.currentTarget.getAttribute("data-category");
-      filterVerbsByCategory(selectedCat);
-      displayPhaseSelection();
-    })
-  );
+  elements.categoriesContainer.innerHTML += `
+    <button class="category" id="dictionary-btn" data-action="dictionary" style="background-image: url('${getImageUrl("dictionary")}');">
+      Dictionary
+    </button>
+  `;
+
+  document.querySelectorAll(".category").forEach(btn => {
+    const action = btn.getAttribute("data-action");
+    if (action === "dictionary") {
+      btn.addEventListener("click", () => {
+        displayDictionary();
+      });
+    } else {
+      btn.addEventListener("click", e => {
+        const selectedCat = e.currentTarget.getAttribute("data-category");
+        filterVerbsByCategory(selectedCat);
+        displayPhaseSelection();
+      });
+    }
+  });
   elements.categorySelection.classList.remove("hidden");
 }
 
@@ -168,6 +187,10 @@ function exitGame() {
   elements.questionSection.classList.add("hidden");
   elements.phaseSelection.classList.add("hidden");
   elements.resultSection.classList.add("hidden");
+  const dictContainer = document.getElementById("dictionary-section");
+  if (dictContainer) {
+    dictContainer.remove();
+  }
   elements.categorySelection.classList.remove("hidden");
   const exitBtn = document.getElementById("exit-game");
   if (exitBtn) {
@@ -194,13 +217,13 @@ function displayQuestion() {
   const correctVerb = verbs[currentQuestion];
 
   if (currentPhase === 1) {
-    // Phase 1: Imagem -> Palavra
+    //1 Imagem -> Palavra
     setupImageQuestion(correctVerb, null);
     elements.optionsElement.classList.remove("phase2");
     const options = generateOptions(correctVerb);
     elements.optionsElement.innerHTML = options.map(getOptionHTML).join("");
   } else if (currentPhase === 2) {
-    // Phase 2: Palavra -> Imagem
+    //2 Palavra -> Imagem
     imageContainer.style.display = "none";
     imageContainer.style.paddingTop = "0";
     imageContainer.style.height = "0";
@@ -210,7 +233,7 @@ function displayQuestion() {
     const options = generateOptions(correctVerb);
     elements.optionsElement.innerHTML = options.map(getOptionHTML).join("");
   } else if (currentPhase === 3) {
-    // Phase 3: Imagem + Input de texto
+    //3 Imagem -> Input de texto
     setupImageQuestion(correctVerb, null);
     elements.optionsElement.classList.remove("phase2");
     elements.optionsElement.innerHTML = `
@@ -226,7 +249,7 @@ function displayQuestion() {
       if (e.key === "Enter") handleAnswer(null, correctVerb);
     });
   } else if (currentPhase === 4) {
-    // Phase 4: Áudio + Input de texto 
+    //4 Áudio -> Input de texto 
     imageContainer.style.display = "none";
     imageContainer.style.paddingTop = "0";
     imageContainer.style.height = "0";
@@ -397,3 +420,85 @@ elements.playAgainButton.addEventListener("click", () => {
   document.getElementById("phase-title").innerText = `Imperative Game - Phase ${currentPhase}`;
   startGame();
 });
+
+function displayDictionary() {
+  try {
+    
+    elements.categorySelection.classList.add("hidden");
+    createExitButton();
+
+    let dictContainer = document.getElementById("dictionary-section");
+    if (!dictContainer) {
+      dictContainer = document.createElement("div");
+      dictContainer.id = "dictionary-section";
+      Object.assign(dictContainer.style, {
+        padding: "20px",
+        maxHeight: "80vh",
+        overflowY: "auto",
+        width: "100%"
+      });
+      const headerContainer = document.getElementById("game-header");
+      if (headerContainer && headerContainer.parentNode) {
+        headerContainer.parentNode.insertBefore(dictContainer, headerContainer.nextSibling);
+      } else {
+        document.body.appendChild(dictContainer);
+      }
+    } else {
+      dictContainer.innerHTML = "";
+    }
+    
+    verbsData.forEach(item => {
+      try {
+        const entry = document.createElement("div");
+        entry.className = "dictionary-entry";
+        entry.style.display = "flex";
+        entry.style.alignItems = "center";
+        entry.style.justifyContent = "space-between";
+        entry.style.borderBottom = "1px solid #ccc";
+        entry.style.padding = "10px 0";
+
+        const textContainer = document.createElement("div");
+        textContainer.style.flex = "1";
+
+        const verbEl = document.createElement("div");
+        verbEl.className = "dictionary-verb";
+        verbEl.textContent = item.verb;
+        verbEl.style.fontWeight = "bold";
+
+        const translationEl = document.createElement("div");
+        translationEl.className = "dictionary-translation";
+        translationEl.textContent = item.translation || "";
+        translationEl.style.fontStyle = "italic";
+
+        textContainer.appendChild(verbEl);
+        textContainer.appendChild(translationEl);
+
+        const audioBtn = document.createElement("button");
+        audioBtn.className = "audio-btn";
+        audioBtn.innerHTML = "&#9654;"; 
+        audioBtn.style.color = "#1d3561";
+        audioBtn.style.marginLeft = "10px";
+        audioBtn.style.cursor = "pointer";
+        audioBtn.style.background = "transparent";
+        audioBtn.style.border = "none";
+        audioBtn.addEventListener("click", () => {
+          try {
+            const audio = new Audio(getVoiceUrl(item.verb));
+            audio.play().catch(err => console.error("Erro ao reproduzir áudio:", err));
+          } catch (err) {
+            console.error("Erro ao criar áudio:", err);
+          }
+        });
+
+        entry.appendChild(textContainer);
+        entry.appendChild(audioBtn);
+        dictContainer.appendChild(entry);
+      } catch (err) {
+        console.error("Erro ao criar entrada do dicionário:", err);
+      }
+    });
+  } catch (err) {
+    console.error("Erro ao exibir o dicionário:", err);
+    alert("Ocorreu um erro ao exibir o dicionário. Tente novamente.");
+  }
+}
