@@ -21,7 +21,7 @@ const elements = {
   optionsElement: document.getElementById("options"),
   resultSection: document.getElementById("result-section"),
   resultElement: document.getElementById("result"),
-  playAgainButton: document.getElementById("play-again"),
+  // playAgainButton: document.getElementById("play-again"), // removido, pois o botão não está mais no HTML
   questionSection: document.getElementById("question-section"),
   categorySelection: document.getElementById("category-selection"),
   categoriesContainer: document.getElementById("categories"),
@@ -217,13 +217,13 @@ function displayQuestion() {
   const correctVerb = verbs[currentQuestion];
 
   if (currentPhase === 1) {
-    //1 Imagem -> Palavra
+    // 1 Imagem -> Palavra
     setupImageQuestion(correctVerb, null);
     elements.optionsElement.classList.remove("phase2");
     const options = generateOptions(correctVerb);
     elements.optionsElement.innerHTML = options.map(getOptionHTML).join("");
   } else if (currentPhase === 2) {
-    //2 Palavra -> Imagem
+    // 2 Palavra -> Imagem
     imageContainer.style.display = "none";
     imageContainer.style.paddingTop = "0";
     imageContainer.style.height = "0";
@@ -233,7 +233,7 @@ function displayQuestion() {
     const options = generateOptions(correctVerb);
     elements.optionsElement.innerHTML = options.map(getOptionHTML).join("");
   } else if (currentPhase === 3) {
-    //3 Imagem -> Input de texto
+    // 3 Imagem -> Input de texto
     setupImageQuestion(correctVerb, null);
     elements.optionsElement.classList.remove("phase2");
     elements.optionsElement.innerHTML = `
@@ -249,7 +249,7 @@ function displayQuestion() {
       if (e.key === "Enter") handleAnswer(null, correctVerb);
     });
   } else if (currentPhase === 4) {
-    //4 Áudio -> Input de texto 
+    // 4 Áudio -> Input de texto 
     imageContainer.style.display = "none";
     imageContainer.style.paddingTop = "0";
     imageContainer.style.height = "0";
@@ -368,6 +368,8 @@ function endGame() {
     buttonsContainer = document.createElement("div");
     buttonsContainer.id = "result-buttons";
     buttonsContainer.style.display = "flex";
+    buttonsContainer.style.justifyContent = "space-between";
+    buttonsContainer.style.alignItems = "center";
     buttonsContainer.style.width = "100%";
     buttonsContainer.style.marginTop = "20px";
     elements.resultSection.appendChild(buttonsContainer);
@@ -375,25 +377,45 @@ function endGame() {
     buttonsContainer.innerHTML = "";
   }
 
-  const playAgainContainer = document.createElement("div");
-  playAgainContainer.style.flex = "1";
-  playAgainContainer.style.display = "flex";
-  playAgainContainer.style.justifyContent = "center";
-  playAgainContainer.appendChild(elements.playAgainButton);
-  buttonsContainer.appendChild(playAgainContainer);
+  const leftContainer = document.createElement("div");
+  leftContainer.style.flex = "1";
+  buttonsContainer.appendChild(leftContainer);
+
+  const centerContainer = document.createElement("div");
+  centerContainer.style.flex = "1";
+  centerContainer.style.display = "flex";
+  centerContainer.style.justifyContent = "center";
+
+  const playAgainImg = document.createElement("img");
+  playAgainImg.src = getImageUrl("again");
+  playAgainImg.alt = "Play Again";
+  playAgainImg.style.cursor = "pointer";
+  playAgainImg.style.width = "30px";
+  playAgainImg.style.height = "30px";
+  playAgainImg.addEventListener("click", () => {
+    currentQuestion = 0;
+    score = 0;
+    chosenAnswers = [];
+    elements.resultSection.classList.add("hidden");
+    elements.questionSection.classList.remove("hidden");
+    document.getElementById("phase-title").innerText = `Imperative Game - Phase ${currentPhase}`;
+    startGame();
+  });
+  centerContainer.appendChild(playAgainImg);
+  buttonsContainer.appendChild(centerContainer);
 
   if (currentPhase < 4) {
-    const nextContainer = document.createElement("div");
-    nextContainer.style.display = "flex";
-    nextContainer.style.justifyContent = "flex-end";
-    nextContainer.style.paddingRight = "40px";
-    
+    const rightContainer = document.createElement("div");
+    rightContainer.style.flex = "1";
+    rightContainer.style.display = "flex";
+    rightContainer.style.justifyContent = "flex-end";
+
     const nextPhaseBtn = document.createElement("button");
     nextPhaseBtn.id = "next-phase";
     nextPhaseBtn.style.background = "transparent";
     nextPhaseBtn.style.border = "none";
+    nextPhaseBtn.style.marginRight = "30px";
     nextPhaseBtn.style.cursor = "pointer";
-    nextPhaseBtn.style.gap = "5px";
     nextPhaseBtn.innerHTML = `<img src="${getImageUrl('next')}" alt="Next Phase" style="width:20px; height:20px;">`;
     nextPhaseBtn.addEventListener("click", () => {
       currentPhase++;
@@ -405,25 +427,14 @@ function endGame() {
       elements.questionSection.classList.remove("hidden");
       startGame();
     });
-
-    nextContainer.appendChild(nextPhaseBtn);
-    buttonsContainer.appendChild(nextContainer);
+    rightContainer.appendChild(nextPhaseBtn);
+    buttonsContainer.appendChild(rightContainer);
   }
 }
 
-elements.playAgainButton.addEventListener("click", () => {
-  currentQuestion = 0;
-  score = 0;
-  chosenAnswers = [];
-  elements.resultSection.classList.add("hidden");
-  elements.questionSection.classList.remove("hidden");
-  document.getElementById("phase-title").innerText = `Imperative Game - Phase ${currentPhase}`;
-  startGame();
-});
 
 function displayDictionary() {
   try {
-    
     elements.categorySelection.classList.add("hidden");
     createExitButton();
 
