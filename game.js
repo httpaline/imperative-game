@@ -83,8 +83,9 @@ function displayCategories() {
     `)
     .join("");
 
-  elements.categoriesContainer.innerHTML += `
-    <button class="category" id="dictionary-btn" data-action="dictionary" style="background-image: url('${getImageUrl("dictionary")}');">
+    elements.categoriesContainer.innerHTML += `
+    <button class="category" id="dictionary-btn" data-action="dictionary" 
+      style="background-image: url('${getImageUrl("dictionary")}'); border-radius: 12px; width: 420px; height: 50px;">
       Dictionary
     </button>
   `;
@@ -258,7 +259,7 @@ function displayQuestion() {
     elements.optionsElement.innerHTML = `
       <div class="phase4-container" style="display: flex; flex-direction: column; align-items: center;">
         <div class="audio-container" style="margin-bottom: 20px;">
-          <button id="play-audio" style="width: 100px; height: 100px; border-radius: 50%; border: none; background-color: #1d3561; font-size: 40px; display: flex; justify-content: center; align-items: center;">▶</button>
+          <button id="play-audio" style="width: 80px; height: 80px; border-radius: 50%; border: none; background-color: #1d3561; font-size: 40px; display: flex; justify-content: center; align-items: center;">▶</button>
         </div>
         <div class="input-container">
           <input type="text" id="text-answer" autofocus />
