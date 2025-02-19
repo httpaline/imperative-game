@@ -1,11 +1,12 @@
-//links
 const sheetCSVURL = "https://script.google.com/macros/s/AKfycbyuaknQikwyWMkbiVYF6x46IQgVRGMulj9ujN-gOFLx1XW92QGEUwqTVK-LcU4nckxh8A/exec";
 const firebaseBaseURL = "https://firebasestorage.googleapis.com/v0/b/irregularverbslingualize.appspot.com/o/images%2F";
 const firebaseVoiceBaseURL = "https://firebasestorage.googleapis.com/v0/b/irregularverbslingualize.appspot.com/o/voice%2F";
-const ANSWER_DELAY = 800;
-const SEGMENTS = 12; 
+const firebaseSoundEffectBaseURL = "https://firebasestorage.googleapis.com/v0/b/irregularverbslingualize.appspot.com/o/soundeffect%2F";
 
-//variáveis
+const ANSWER_DELAY = 800;
+const SEGMENTS = 12;
+
+
 let verbsData = [],
     verbs = [],
     currentQuestion = 0,
@@ -15,7 +16,10 @@ let verbsData = [],
     isDataLoaded = false,
     currentPhase = 1;
 
-//DOM  
+let timerInterval;
+let timerValue = 10;
+
+
 const elements = {
   questionImage: document.getElementById("question-image"),
   questionElement: document.getElementById("question"),
@@ -30,8 +34,16 @@ const elements = {
 
 const imageContainer = document.getElementById("image-container");
 const imageCache = {};
+
+
 const getImageUrl = name => `${firebaseBaseURL}${encodeURIComponent(name)}.webp?alt=media`;
 const getVoiceUrl = name => `${firebaseVoiceBaseURL}${encodeURIComponent(name)}.aac?alt=media`;
+const getSoundUrl = name => `${firebaseSoundEffectBaseURL}${encodeURIComponent(name)}.AAC?alt=media`;
+
+function playSoundEffect(name) {
+  const audio = new Audio(getSoundUrl(name));
+  audio.play().catch(err => console.error("Erro ao tocar som:", err));
+}
 
 (async () => { await loadVerbsFromCSV(); })();
 
@@ -80,33 +92,31 @@ function displayCategories() {
   });
   const uniqueCats = [...new Set(verbsData.map(item => item.category))];
   elements.categoriesContainer.innerHTML = uniqueCats
-    .map(cat => `
-      <button class="category" data-category="${cat}" style="background-image: url('${catImages[cat]}');">
+    .map(cat => 
+      `<button class="category" data-category="${cat}" style="background-image: url('${catImages[cat]}');">
         ${cat.charAt(0).toUpperCase() + cat.slice(1)}
-      </button>
-    `)
+      </button>`
+    )
     .join("");
 
-  elements.categoriesContainer.innerHTML += `
-    <button class="category" id="dictionary-btn" data-action="dictionary" 
+  elements.categoriesContainer.innerHTML += 
+    `<button class="category" id="dictionary-btn" data-action="dictionary" 
       style="background-image: url('${getImageUrl("dictionary")}'); border-radius: 12px; width: 420px; height: 50px;">
       Dictionary
-    </button>
-  `;
+    </button>`;
 
   document.querySelectorAll(".category").forEach(btn => {
     const action = btn.getAttribute("data-action");
-    if (action === "dictionary") {
-      btn.addEventListener("click", () => {
+    btn.addEventListener("click", () => {
+      playSoundEffect("click");
+      if (action === "dictionary") {
         displayDictionary();
-      });
-    } else {
-      btn.addEventListener("click", e => {
-        const selectedCat = e.currentTarget.getAttribute("data-category");
+      } else {
+        const selectedCat = btn.getAttribute("data-category");
         filterVerbsByCategory(selectedCat);
         displayPhaseSelection();
-      });
-    }
+      }
+    });
   });
   elements.categorySelection.classList.remove("hidden");
 }
@@ -140,16 +150,16 @@ function displayPhaseSelection() {
   createExitButton();
 
   elements.categorySelection.classList.add("hidden");
-  elements.phaseSelection.innerHTML = `
-    <button class="phase" data-phase="1">Phase 1<br><small>Palavra/Imagem</small></button>
+  elements.phaseSelection.innerHTML = 
+    `<button class="phase" data-phase="1">Phase 1<br><small>Palavra/Imagem</small></button>
     <button class="phase" data-phase="2">Phase 2<br><small>Imagem/Palavra</small></button>
     <button class="phase" data-phase="3">Phase 3<br><small>Imagem/Palavra</small></button>
-    <button class="phase" data-phase="4">Phase 4<br><small>Áudio/Palavra</small></button>
-  `;
+    <button class="phase" data-phase="4">Phase 4<br><small>Áudio/Palavra</small></button>`;
   elements.phaseSelection.classList.remove("hidden");
 
   document.querySelectorAll(".phase").forEach(btn =>
     btn.addEventListener("click", e => {
+      playSoundEffect("click");
       currentPhase = parseInt(e.currentTarget.getAttribute("data-phase"), 10);
       elements.phaseSelection.classList.add("hidden");
       startGame();
@@ -166,6 +176,7 @@ function startGame() {
   elements.questionSection.classList.remove("hidden");
   document.getElementById("phase-title").innerText = `Imperative Game - Phase ${currentPhase}`;
   createExitButton();
+  startTimer(verbs[currentQuestion]);
   displayQuestion();
 }
 
@@ -189,6 +200,7 @@ function createExitButton() {
 }
 
 function exitGame() {
+  stopTimer();
   elements.questionSection.classList.add("hidden");
   elements.phaseSelection.classList.add("hidden");
   elements.resultSection.classList.add("hidden");
@@ -217,10 +229,61 @@ function setupImageQuestion(verb, questionText, fontSize = "24px") {
   elements.questionElement.style.fontSize = fontSize;
 }
 
+function createTimerElement() {
+  let timerEl = document.getElementById("timer");
+  if (!timerEl) {
+    timerEl = document.createElement("div");
+    timerEl.id = "timer";
+    Object.assign(timerEl.style, {
+      position: "absolute",
+      right: "20px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      fontSize: "18px",
+      fontWeight: "bold"
+    });
+    document.getElementById("game-header").appendChild(timerEl);
+  }
+  timerEl.innerText = "10";
+}
+
+function updateTimerDisplay(value) {
+  const timerEl = document.getElementById("timer");
+  if (timerEl) timerEl.innerText = value;
+}
+
+function startTimer(correctVerb) {
+  timerValue = 10;
+  createTimerElement();
+  updateTimerDisplay(timerValue);
+  playSoundEffect("start");
+  
+  timerInterval = setInterval(() => {
+    timerValue--;
+    updateTimerDisplay(timerValue);
+    
+    if (timerValue <= 3 && timerValue > 0) {
+      playSoundEffect("bip");
+    }
+    
+    if (timerValue === 0) {
+      clearInterval(timerInterval);
+      handleAnswer(null, correctVerb);
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  updateTimerDisplay(10);
+}
+
 function displayQuestion() {
   if (currentQuestion >= totalQuestions) return endGame();
   const correctVerb = verbs[currentQuestion];
-
+  stopTimer();
+  startTimer(correctVerb);
+  
   if (currentPhase === 1) {
     // Fase 1: Imagem -> Palavra
     setupImageQuestion(correctVerb, null);
@@ -248,13 +311,17 @@ function displayQuestion() {
       </div>
     `;
     document.getElementById("submit-answer").addEventListener("click", () => {
+      stopTimer();
       handleAnswer(null, correctVerb);
     });
     document.getElementById("text-answer").addEventListener("keydown", e => {
-      if (e.key === "Enter") handleAnswer(null, correctVerb);
+      if (e.key === "Enter") {
+        stopTimer();
+        handleAnswer(null, correctVerb);
+      }
     });
   } else if (currentPhase === 4) {
-    // Fase 4: Áudio -> Input de texto com barra de progresso segmentada
+    // Fase 4: Áudio -> Input de texto
     imageContainer.style.display = "none";
     imageContainer.style.paddingTop = "0";
     imageContainer.style.height = "0";
@@ -271,7 +338,6 @@ function displayQuestion() {
         <div class="audio-container" style="margin-bottom: 20px;">
           <button id="play-audio" style="width: 80px; height: 80px; border-radius: 50%; border: none; background-color: #1d3561; font-size: 40px; display: flex; justify-content: center; align-items: center;">▶</button>
         </div>
-        <!-- Barra de Progresso Segmentada -->
         <div id="progress-container" style="display: flex; width: 100%; max-width: 400px; height: 10px; margin-bottom: 20px;">
           ${segmentsHTML}
         </div>
@@ -285,14 +351,19 @@ function displayQuestion() {
     updateProgressBar();
 
     document.getElementById("play-audio").addEventListener("click", () => {
+      playSoundEffect("click");
       const audio = new Audio(getVoiceUrl(correctVerb));
       audio.play();
     });
     document.getElementById("submit-answer").addEventListener("click", () => {
+      stopTimer();
       handleAnswer(null, correctVerb);
     });
     document.getElementById("text-answer").addEventListener("keydown", e => {
-      if (e.key === "Enter") handleAnswer(null, correctVerb);
+      if (e.key === "Enter") {
+        stopTimer();
+        handleAnswer(null, correctVerb);
+      }
     });
   }
 }
@@ -333,6 +404,7 @@ elements.optionsElement.addEventListener("click", e => {
   if (!optionEl || optionEl.style.pointerEvents === "none") return;
   const selectedVerb = optionEl.getAttribute("data-verb");
   const correctVerb = verbs[currentQuestion];
+  stopTimer();
   handleAnswer(selectedVerb, correctVerb);
 });
 
@@ -365,6 +437,7 @@ function handleAnswer(selectedVerb, correctVerb) {
     const answer = inputEl.value.trim();
     const isCorrect = answer.toLowerCase() === correctVerb.toLowerCase();
     inputEl.style.backgroundColor = isCorrect ? "#6ad089" : "#ff4d4e";
+    playSoundEffect(isCorrect ? "correct" : "mistake");
     recordAnswer(correctVerb, isCorrect);
   } else {
     elements.optionsElement.querySelectorAll(".option").forEach(option => {
@@ -374,25 +447,29 @@ function handleAnswer(selectedVerb, correctVerb) {
         ? "#6ad089"
         : (verb === selectedVerb ? "#ff4d4e" : "");
     });
+    playSoundEffect(selectedVerb === correctVerb ? "correct" : "mistake");
     recordAnswer(correctVerb, selectedVerb === correctVerb);
   }
 }
 
 function endGame() {
+  stopTimer();
+  if (score >= totalQuestions / 2) {
+    playSoundEffect("win");
+  } else {
+    playSoundEffect("fail");
+  }
+
   elements.questionSection.classList.add("hidden");
   elements.resultSection.classList.remove("hidden");
   elements.resultElement.innerHTML = `
     <p class="result-score">Você acertou <span class="score">${score}</span> de <span class="total">${totalQuestions}</span>!</p>
     <ul class="result-list">
-      ${chosenAnswers
-        .map(
-          ({ question, correct }) => `
-          <li class="result-item" style="background-color: ${correct ? "#6ad089" : "#ff4d4e"}; border: 1px solid ${correct ? "#c3e6cb" : "#f5c6cb"}">
-            <span class="result-verb">${question}</span>
-          </li>
-        `
-        )
-        .join("")}
+      ${chosenAnswers.map(({ question, correct }) => 
+        `<li class="result-item" style="background-color: ${correct ? "#6ad089" : "#ff4d4e"}; border: 1px solid ${correct ? "#c3e6cb" : "#f5c6cb"}">
+          <span class="result-verb">${question}</span>
+        </li>`).join("")
+      }
     </ul>
   `;
 
@@ -468,7 +545,6 @@ function endGame() {
   }
 }
 
-
 function displayDictionary() {
   try {
     elements.categorySelection.classList.add("hidden");
@@ -522,13 +598,14 @@ function displayDictionary() {
 
         const audioBtn = document.createElement("button");
         audioBtn.className = "audio-btn";
-        audioBtn.innerHTML = "&#9654;"; 
+        audioBtn.innerHTML = "&#9654;";
         audioBtn.style.color = "#1d3561";
         audioBtn.style.marginLeft = "10px";
         audioBtn.style.cursor = "pointer";
         audioBtn.style.background = "transparent";
         audioBtn.style.border = "none";
         audioBtn.addEventListener("click", () => {
+          playSoundEffect("click");
           try {
             const audio = new Audio(getVoiceUrl(item.verb));
             audio.play().catch(err => console.error("Erro ao reproduzir áudio:", err));
