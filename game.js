@@ -3,6 +3,7 @@ const sheetCSVURL = "https://script.google.com/macros/s/AKfycbyuaknQikwyWMkbiVYF
 const firebaseBaseURL = "https://firebasestorage.googleapis.com/v0/b/irregularverbslingualize.appspot.com/o/images%2F";
 const firebaseVoiceBaseURL = "https://firebasestorage.googleapis.com/v0/b/irregularverbslingualize.appspot.com/o/voice%2F";
 const ANSWER_DELAY = 800;
+const SEGMENTS = 12; 
 
 //variáveis
 let verbsData = [],
@@ -21,7 +22,6 @@ const elements = {
   optionsElement: document.getElementById("options"),
   resultSection: document.getElementById("result-section"),
   resultElement: document.getElementById("result"),
-  // playAgainButton: document.getElementById("play-again"), // removido, pois o botão não está mais no HTML
   questionSection: document.getElementById("question-section"),
   categorySelection: document.getElementById("category-selection"),
   categoriesContainer: document.getElementById("categories"),
@@ -58,10 +58,14 @@ function parseCSV(text) {
       const parts = row.split(",");
       if (parts.length >= 4) {
         const [cat, id, verb, translation] = parts;
-        return (cat && id && verb) ? { category: cat.trim(), id: id.trim(), verb: verb.trim(), translation: translation.trim() } : null;
+        return (cat && id && verb)
+          ? { category: cat.trim(), id: id.trim(), verb: verb.trim(), translation: translation.trim() }
+          : null;
       } else {
         const [cat, id, verb] = parts;
-        return (cat && id && verb) ? { category: cat.trim(), id: id.trim(), verb: verb.trim(), translation: "" } : null;
+        return (cat && id && verb)
+          ? { category: cat.trim(), id: id.trim(), verb: verb.trim(), translation: "" }
+          : null;
       }
     })
     .filter(Boolean);
@@ -83,7 +87,7 @@ function displayCategories() {
     `)
     .join("");
 
-    elements.categoriesContainer.innerHTML += `
+  elements.categoriesContainer.innerHTML += `
     <button class="category" id="dictionary-btn" data-action="dictionary" 
       style="background-image: url('${getImageUrl("dictionary")}'); border-radius: 12px; width: 420px; height: 50px;">
       Dictionary
@@ -218,13 +222,13 @@ function displayQuestion() {
   const correctVerb = verbs[currentQuestion];
 
   if (currentPhase === 1) {
-    // 1 Imagem -> Palavra
+    // Fase 1: Imagem -> Palavra
     setupImageQuestion(correctVerb, null);
     elements.optionsElement.classList.remove("phase2");
     const options = generateOptions(correctVerb);
     elements.optionsElement.innerHTML = options.map(getOptionHTML).join("");
   } else if (currentPhase === 2) {
-    // 2 Palavra -> Imagem
+    // Fase 2: Palavra -> Imagem
     imageContainer.style.display = "none";
     imageContainer.style.paddingTop = "0";
     imageContainer.style.height = "0";
@@ -234,7 +238,7 @@ function displayQuestion() {
     const options = generateOptions(correctVerb);
     elements.optionsElement.innerHTML = options.map(getOptionHTML).join("");
   } else if (currentPhase === 3) {
-    // 3 Imagem -> Input de texto
+    // Fase 3: Imagem -> Input de texto
     setupImageQuestion(correctVerb, null);
     elements.optionsElement.classList.remove("phase2");
     elements.optionsElement.innerHTML = `
@@ -250,16 +254,26 @@ function displayQuestion() {
       if (e.key === "Enter") handleAnswer(null, correctVerb);
     });
   } else if (currentPhase === 4) {
-    // 4 Áudio -> Input de texto 
+    // Fase 4: Áudio -> Input de texto com barra de progresso segmentada
     imageContainer.style.display = "none";
     imageContainer.style.paddingTop = "0";
     imageContainer.style.height = "0";
     elements.questionElement.innerText = "";
     elements.optionsElement.classList.remove("phase2");
+
+    let segmentsHTML = "";
+    for (let i = 0; i < SEGMENTS; i++) {
+      segmentsHTML += `<div class="progress-segment" style="flex: 1; margin: 1px; background: #e0e0e0; border-radius: 2px;"></div>`;
+    }
+
     elements.optionsElement.innerHTML = `
       <div class="phase4-container" style="display: flex; flex-direction: column; align-items: center;">
         <div class="audio-container" style="margin-bottom: 20px;">
           <button id="play-audio" style="width: 80px; height: 80px; border-radius: 50%; border: none; background-color: #1d3561; font-size: 40px; display: flex; justify-content: center; align-items: center;">▶</button>
+        </div>
+        <!-- Barra de Progresso Segmentada -->
+        <div id="progress-container" style="display: flex; width: 100%; max-width: 400px; height: 10px; margin-bottom: 20px;">
+          ${segmentsHTML}
         </div>
         <div class="input-container">
           <input type="text" id="text-answer" autofocus />
@@ -267,6 +281,9 @@ function displayQuestion() {
         </div>
       </div>
     `;
+
+    updateProgressBar();
+
     document.getElementById("play-audio").addEventListener("click", () => {
       const audio = new Audio(getVoiceUrl(correctVerb));
       audio.play();
@@ -323,7 +340,22 @@ function recordAnswer(correctVerb, isCorrect) {
   score += isCorrect ? 1 : 0;
   chosenAnswers.push({ question: correctVerb, correct: isCorrect });
   currentQuestion++;
+
+  if (currentPhase === 4) {
+    updateProgressBar();
+  }
   setTimeout(displayQuestion, ANSWER_DELAY);
+}
+
+function updateProgressBar() {
+  const segments = document.querySelectorAll("#progress-container .progress-segment");
+  segments.forEach((segment, index) => {
+    if (index < chosenAnswers.length) {
+      segment.style.backgroundColor = chosenAnswers[index].correct ? "#6ad089" : "#ff4d4e";
+    } else {
+      segment.style.backgroundColor = "#e0e0e0";
+    }
+  });
 }
 
 function handleAnswer(selectedVerb, correctVerb) {
@@ -369,18 +401,21 @@ function endGame() {
     buttonsContainer = document.createElement("div");
     buttonsContainer.id = "result-buttons";
     buttonsContainer.style.display = "flex";
-    buttonsContainer.style.justifyContent = "space-between";
+    buttonsContainer.style.justifyContent = (currentPhase === 4) ? "center" : "space-between";
     buttonsContainer.style.alignItems = "center";
     buttonsContainer.style.width = "100%";
     buttonsContainer.style.marginTop = "20px";
     elements.resultSection.appendChild(buttonsContainer);
   } else {
     buttonsContainer.innerHTML = "";
+    buttonsContainer.style.justifyContent = (currentPhase === 4) ? "center" : "space-between";
   }
 
-  const leftContainer = document.createElement("div");
-  leftContainer.style.flex = "1";
-  buttonsContainer.appendChild(leftContainer);
+  if (currentPhase < 4) {
+    const leftContainer = document.createElement("div");
+    leftContainer.style.flex = "1";
+    buttonsContainer.appendChild(leftContainer);
+  }
 
   const centerContainer = document.createElement("div");
   centerContainer.style.flex = "1";
